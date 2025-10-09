@@ -36,7 +36,7 @@ def schrodinger_residual(model, t, x):
     rhs = - (model.hbar**2) / (2 * model.m) * d2psi_dx2 + model.V(x) * psi
     
     # return square
-    return torch.tensor(0) * torch.max(torch.abs(lhs - rhs))
+    return torch.max(torch.abs(lhs - rhs))
 
 # %%
 def observation_loss(model, t_obs, x_obs):
