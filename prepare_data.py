@@ -10,87 +10,43 @@ from sklearn.preprocessing import StandardScaler
 DIR = "Data"
 
 # %%
-class CSVDataset(Dataset):
-    def __init__(self, csv_file, t_cols:List[str], x_cols:List[str], standardize = True):
-        super(CSVDataset, self).__init__()
-        self.standardize = standardize
+def get_dataloader_from_csv_file(csv_file, t_cols, x_cols, batch_size, train_ratio=0.9):
+    # Load data
+    df = pd.read_csv(os.path.join(DIR, csv_file))
+    t_raw = df[t_cols].values.astype(np.float32)
+    x_raw = df[x_cols].values.astype(np.float32)
 
-        self.path = os.path.join(DIR, csv_file)
-        if not os.path.exists(self.path):
-            raise FileNotFoundError(f"file can not be found: {self.path}")
-        
-        self.data = pd.read_csv(self.path)
-        self.t = self.data[t_cols].values
-        self.x = self.data[x_cols].values
-
-        for col in t_cols:
-            if col not in self.data.columns:
-                raise ValueError(f"Column '{col}' not found in CSV file")
-        for col in x_cols:
-            if col not in self.data.columns:
-                raise ValueError(f"Column '{col}' not found in CSV file")
-
-        self.scaler = StandardScaler()
-        if self.standardize:
-            self.scaler.fit(self.x)
-            self.x = self.scaler.transform(self.x)
-    
-    def __len__(self):
-        return len(self.data)
-    
-    def __getitem__(self, idx):
-        t = torch.tensor(self.t[idx], dtype=torch.float32)
-        x = torch.tensor(self.x[idx], dtype=torch.float32)
-
-        return t, x
-    
-    def get_scaler(self):
-        if self.standardize:
-            return self.scaler
-        else:
-            raise ValueError("no standardize, no scaler")
-    
-    def get_data(self):
-        return self.data
-
-# %%
-# %%
-def get_dataloader_from_csv_file(csv_file, t_cols: List[str], x_cols: List[str], 
-                                 batch_size, train_ratio=0.9, seed=42):
-    """
-    Load CSV data and split into train and eval DataLoaders.
-    
-    Returns:
-        train_loader, eval_loader, scaler
-    """
-    # Load full dataset
-    full_dataset = CSVDataset(csv_file, t_cols, x_cols, standardize=True)
-    scaler = full_dataset.get_scaler()
-    
-    total_size = len(full_dataset)
+    # Time-based split (NO shuffle!)
+    total_size = len(df)
     train_size = int(train_ratio * total_size)
-    eval_size = total_size - train_size
+    
+    t_train, x_train = t_raw[:train_size], x_raw[:train_size]
+    t_eval, x_eval = t_raw[train_size:], x_raw[train_size:]
 
-    # Set seed for reproducibility
-    torch.manual_seed(seed)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed(seed)
-    np.random.seed(seed)
+    # Standardize ONLY on train set
+    scaler = StandardScaler()
+    x_train_scaled = scaler.fit_transform(x_train)
+    x_eval_scaled = scaler.transform(x_eval)
 
-    # Randomly split indices
-    indices = torch.randperm(total_size).tolist()
-    train_indices = indices[:train_size]
-    eval_indices = indices[train_size:]
+    # Create datasets
+    train_dataset = ArrayDataset(t_train, x_train_scaled)
+    eval_dataset = ArrayDataset(t_eval, x_eval_scaled)
 
-    # Create subsets
-    train_dataset = torch.utils.data.Subset(full_dataset, train_indices)
-    eval_dataset = torch.utils.data.Subset(full_dataset, eval_indices)
-
-    # Create DataLoaders
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     eval_loader = DataLoader(eval_dataset, batch_size=batch_size, shuffle=False)
 
     return train_loader, eval_loader, scaler
+
+class ArrayDataset(Dataset):
+    def __init__(self, t_array, x_array):
+        self.t = torch.from_numpy(t_array)
+        self.x = torch.from_numpy(x_array)
+    
+    def __len__(self):
+        return len(self.t)
+    
+    def __getitem__(self, idx):
+        return self.t[idx], self.x[idx]
 
 # %%
 def extract_t_and_y_from_loader(eval_loader: DataLoader):
