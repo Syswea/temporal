@@ -126,8 +126,8 @@ def train(model, train_loader, eval_loader, epochs, lr, device,
             optimizer.zero_grad()
 
             # Losses (all weighted by 1000)
-            # schrodinger_loss = 1 * schrodinger_residual(model, t, x)
-            schrodinger_loss = 0 * schrodinger_residual(model, t, x)
+            schrodinger_loss = 1 * schrodinger_residual(model, t, x)
+            # schrodinger_loss = 0 * schrodinger_residual(model, t, x)
             obs_loss = 1 * observation_loss(model, t, x)
             norm_loss = 1 * normalization_loss(model, t, x, device)
 
