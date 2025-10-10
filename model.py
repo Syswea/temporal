@@ -128,7 +128,7 @@ def train(model, train_loader, eval_loader, epochs, lr, device,
             # Losses (all weighted by 1000)
             schrodinger_loss = 1 * schrodinger_residual(model, t, x)
             # schrodinger_loss = 0 * schrodinger_residual(model, t, x)
-            obs_loss = 1 * observation_loss(model, t, x)
+            obs_loss = 3 * observation_loss(model, t, x)
             norm_loss = 1 * normalization_loss(model, t, x, device)
 
             loss = schrodinger_loss + obs_loss + norm_loss
@@ -167,7 +167,7 @@ def train(model, train_loader, eval_loader, epochs, lr, device,
             # 1. MAE (不需要梯度)
             with torch.no_grad():
                 x_pred = predicted(model, t_eval, device, method=eval_method)
-                mae_batch = torch.mean((x_pred - x_true)** 2).item()
+                mae_batch = torch.mean(torch.abs(x_pred - x_true)).item()
 
             # 2. PDE residual (需要梯度！)
             t_eval.requires_grad_(True)  # ✅ 启用梯度
