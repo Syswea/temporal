@@ -13,6 +13,7 @@ DIR = "Data"
 def get_dataloader_from_csv_file(csv_file, t_cols, x_cols, batch_size, train_ratio=0.9):
     # Load data
     df = pd.read_csv(os.path.join(DIR, csv_file))
+    df = df.sample(frac=1, random_state=42).reset_index(drop=True)  # Shuffle the data
     t_raw = df[t_cols].values.astype(np.float32)
     x_raw = df[x_cols].values.astype(np.float32)
 
