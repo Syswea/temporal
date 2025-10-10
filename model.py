@@ -150,7 +150,8 @@ def train(model, train_loader, eval_loader, epochs, lr, device,
         avg_norm = np.mean(norm_losses)
         avg_grad_norm = np.mean(grad_norms)
         
-        scheduler.step(avg_train_loss)
+        # scheduler.step(avg_train_loss)
+        scheduler.step(composite_score)  # ✅ 用验证 composite score 控制 LR
 
         # ========== Evaluation ==========
         model.eval()
